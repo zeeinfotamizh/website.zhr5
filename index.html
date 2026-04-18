@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Zee Info Tamizh</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+  <style>
+    body { margin:0; font-family:Arial; background:#0f172a; color:white; }
+    header { background:#1e293b; text-align:center; padding:20px; }
+    header img { width:80px; height:80px; border-radius:10px; }
+    .container { max-width:900px; margin:auto; padding:20px; }
+    .card { background:#1e293b; padding:15px; margin:15px 0; border-radius:10px; }
+    input, textarea, select { width:100%; padding:10px; margin:5px 0; border:none; border-radius:5px; }
+    button { padding:8px 12px; background:#38bdf8; border:none; border-radius:5px; cursor:pointer; margin-right:5px; }
+    button:hover { background:#0ea5e9; }
+    img.post-img { width:100%; margin-top:10px; border-radius:10px; }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <img src="https://gcedmvdulfyiazlqcobp.supabase.co/storage/v1/object/public/images/klhohoi.jpg">
+  <h1>Zee Info Tamizh ⚡</h1>
+  <p>Facts • News • Thoughts</p>
+</header>
+
+<div class="container">
+
+  <!-- LOGIN -->
+  <div class="card" id="loginBox">
+    <h2>Sign In 🔐</h2>
+
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+
+    <button onclick="login()">Sign In</button>
+    <button onclick="signup()">Sign Up</button>
+    <button onclick="logout()">Logout</button>
+
+    <p id="status"></p>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div class="card" id="adminPanel" style="display:none;">
+    <h2>Admin Dashboard 👑</h2>
+
+    <input type="text" id="title" placeholder="Title">
+    <textarea id="content" placeholder="Content"></textarea>
+
+    <select id="category">
+      <option value="News">News 📰</option>
+      <option value="Facts">Facts ⚡</option>
+      <option value="Thoughts">Thoughts 💭</option>
+    </select>
+
+    <input type="file" id="imageFile">
+
+    <button onclick="addPost()">Publish</button>
+    <button onclick="clearDraft()">🗑 Clear Draft</button>
+  </div>
+
+  <!-- POSTS -->
+  <div id="posts"></div>
+
+</div>
+
+<script>
+  const supabaseUrl = "https://gcedmvdulfyiazlqcobp.supabase.co";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjZWRtdmR1bGZ5aWF6bHFjb2JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0Nzk2MTksImV4cCI6MjA5MjA1NTYxOX0.fuGj_k4a5RZrv-SSjneiKjdyzEiz9qvs2IdO4ILpt-Y";
+
+  const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+  const ADMIN_EMAIL = "zahracadir2005@gmail.com";
+  let user = null;
+
+  // 🔐 SIGN UP (NEW FIX)
+  async function signup() {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+
+    const { error } = await supabaseClient.auth.signUp({
+      email,
+      password
+    });
+
+    if (error) {
+      status.innerText = "❌ " + error.message;
+      return;
+    }
+
+    status.innerText = "✅ Account created! Now sign in.";
+  }
+
+  // 🔐 LOGIN
+  async function login() {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      status.innerText = "❌ " + error.message;
+      return;
+    }
+
+    user = data.user;
+    status.innerText = "✅ Signed in";
+    checkUser();
+  }
+
+  // 🚪 LOGOUT
+  async function logout() {
+    await supabaseClient.auth.signOut();
+    user = null;
+    status.innerText = "👋 Logged out";
+    checkUser();
+  }
+
+  // 🔐 USER CHECK
+  async function checkUser() {
+    const { data } = await supabaseClient.auth.getUser();
+    user = data.user;
+
+    const loginBox = document.getElementById("loginBox");
+    const adminPanel = document.getElementById("adminPanel");
+
+    if (!user) {
+      loginBox.style.display = "block";
+      adminPanel.style.display = "none";
+      return;
+    }
+
+    loginBox.style.display = "none";
+
+    if (user.email === ADMIN_EMAIL) {
+      adminPanel.style.display = "block";
+    } else {
+      adminPanel.style.display = "none";
+    }
+
+    loadPosts();
+  }
+
+  // 🗑 CLEAR DRAFT
+  function clearDraft() {
+    document.getElementById("title").value = "";
+    document.getElementById("content").value = "";
+    document.getElementById("imageFile").value = "";
+    document.getElementById("category").selectedIndex = 0;
+  }
+
+  // 📰 ADD POST
+  async function addPost() {
+    let imageUrl = null;
+    const file = imageFile.files[0];
+
+    if (file) {
+      const fileName = Date.now() + file.name;
+
+      const { error } = await supabaseClient.storage.from("images").upload(fileName, file);
+
+      if (!error) {
+        imageUrl = supabaseClient.storage.from("images").getPublicUrl(fileName).data.publicUrl;
+      }
+    }
+
+    await supabaseClient.from("posts").insert([{
+      title: title.value,
+      content: content.value,
+      category: category.value,
+      image: imageUrl
+    }]);
+
+    clearDraft();
+    loadPosts();
+  }
+
+  // 📄 LOAD POSTS (ALL USERS CAN SEE)
+  async function loadPosts() {
+    const { data } = await supabaseClient
+      .from("posts")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    posts.innerHTML = "";
+
+    data.forEach(post => {
+      posts.innerHTML += `
+        <div class="card">
+          <h2>${post.title}</h2>
+          <p>🏷 ${post.category}</p>
+          ${post.image ? `<img class="post-img" src="${post.image}">` : ""}
+          <p>${post.content}</p>
+
+          ${user && user.email === ADMIN_EMAIL ? `
+            <button onclick="deletePost('${post.id}')">🗑 Delete</button>
+            <button onclick="editPost('${post.id}', \`${post.title}\`, \`${post.content}\`)">✏️ Edit</button>
+          ` : ""}
+        </div>
+      `;
+    });
+  }
+
+  // ❌ DELETE (ADMIN ONLY)
+  async function deletePost(id) {
+    if (!user || user.email !== ADMIN_EMAIL) return;
+    if (!confirm("Delete this post?")) return;
+
+    await supabaseClient.from("posts").delete().eq("id", id);
+    loadPosts();
+  }
+
+  // ✏️ EDIT
+  async function editPost(id, titleVal, contentVal) {
+    const newTitle = prompt("Edit title", titleVal);
+    const newContent = prompt("Edit content", contentVal);
+
+    await supabaseClient.from("posts")
+      .update({ title: newTitle, content: newContent })
+      .eq("id", id);
+
+    loadPosts();
+  }
+
+  checkUser();
+  loadPosts();
+</script>
+
+</body>
+</html>
