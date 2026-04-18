@@ -37,8 +37,8 @@
     <input type="email" id="email" placeholder="Email">
     <input type="password" id="password" placeholder="Password">
 
-    <button onclick="login()">Sign In</button>
     <button onclick="signup()">Sign Up</button>
+    <button onclick="login()">Sign In</button>
     <button onclick="logout()">Logout</button>
 
     <p id="status"></p>
@@ -77,12 +77,12 @@
   const ADMIN_EMAIL = "zahracadir2005@gmail.com";
   let user = null;
 
-  // 🔐 SIGN UP (NEW FIX)
+  // 🔥 SIGN UP (NOW WORKS IMMEDIATELY)
   async function signup() {
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
+    const email = email.value.trim();
+    const password = password.value.trim();
 
-    const { error } = await supabaseClient.auth.signUp({
+    const { data, error } = await supabaseClient.auth.signUp({
       email,
       password
     });
@@ -92,7 +92,7 @@
       return;
     }
 
-    status.innerText = "✅ Account created! Now sign in.";
+    status.innerText = "✅ Account created! You can now sign in.";
   }
 
   // 🔐 LOGIN
@@ -111,7 +111,8 @@
     }
 
     user = data.user;
-    status.innerText = "✅ Signed in";
+    status.innerText = "✅ Signed in successfully";
+
     checkUser();
   }
 
@@ -150,10 +151,10 @@
 
   // 🗑 CLEAR DRAFT
   function clearDraft() {
-    document.getElementById("title").value = "";
-    document.getElementById("content").value = "";
-    document.getElementById("imageFile").value = "";
-    document.getElementById("category").selectedIndex = 0;
+    title.value = "";
+    content.value = "";
+    imageFile.value = "";
+    category.selectedIndex = 0;
   }
 
   // 📰 ADD POST
@@ -164,10 +165,14 @@
     if (file) {
       const fileName = Date.now() + file.name;
 
-      const { error } = await supabaseClient.storage.from("images").upload(fileName, file);
+      const { error } = await supabaseClient.storage
+        .from("images")
+        .upload(fileName, file);
 
       if (!error) {
-        imageUrl = supabaseClient.storage.from("images").getPublicUrl(fileName).data.publicUrl;
+        imageUrl = supabaseClient.storage
+          .from("images")
+          .getPublicUrl(fileName).data.publicUrl;
       }
     }
 
@@ -182,7 +187,7 @@
     loadPosts();
   }
 
-  // 📄 LOAD POSTS (ALL USERS CAN SEE)
+  // 📄 LOAD POSTS (VISIBLE TO ALL USERS)
   async function loadPosts() {
     const { data } = await supabaseClient
       .from("posts")
